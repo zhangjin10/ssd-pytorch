@@ -1,6 +1,7 @@
 from torch import nn
 from torch.hub import load_state_dict_from_url
 
+
 def _make_divisible(v, divisor, min_value=None):
     if min_value is None:
         min_value = divisor
@@ -9,17 +10,31 @@ def _make_divisible(v, divisor, min_value=None):
         new_v += divisor
     return new_v
 
+
 class ConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1):
+
+    def __init__(self,
+                 in_planes,
+                 out_planes,
+                 kernel_size=3,
+                 stride=1,
+                 groups=1):
         padding = (kernel_size - 1) // 2
         super(ConvBNReLU, self).__init__(
-            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
-            nn.BatchNorm2d(out_planes),
-            nn.ReLU6(inplace=True)
-        )
+            nn.Conv2d(
+                in_planes,
+                out_planes,
+                kernel_size,
+                stride,
+                padding,
+                groups=groups,
+                bias=False), nn.BatchNorm2d(out_planes),
+            nn.ReLU6(inplace=True))
         self.out_channels = out_planes
 
+
 class InvertedResidual(nn.Module):
+
     def __init__(self, inp, oup, stride, expand_ratio):
         super(InvertedResidual, self).__init__()
         self.stride = stride
@@ -32,7 +47,8 @@ class InvertedResidual(nn.Module):
         if expand_ratio != 1:
             layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1))
         layers.extend([
-            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim),
+            ConvBNReLU(
+                hidden_dim, hidden_dim, stride=stride, groups=hidden_dim),
             nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
             nn.BatchNorm2d(oup),
         ])
@@ -46,8 +62,14 @@ class InvertedResidual(nn.Module):
         else:
             return self.conv(x)
 
+
 class MobileNetV2(nn.Module):
-    def __init__(self, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, round_nearest=8):
+
+    def __init__(self,
+                 num_classes=1000,
+                 width_mult=1.0,
+                 inverted_residual_setting=None,
+                 round_nearest=8):
         super(MobileNetV2, self).__init__()
         block = InvertedResidual
         input_channel = 32
@@ -64,20 +86,27 @@ class MobileNetV2(nn.Module):
                 [6, 320, 1, 1],
             ]
 
-        if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
+        if len(inverted_residual_setting) == 0 or len(
+                inverted_residual_setting[0]) != 4:
             raise ValueError("inverted_residual_setting should be non-empty "
-                             "or a 4-element list, got {}".format(inverted_residual_setting))
+                             "or a 4-element list, got {}".format(
+                                 inverted_residual_setting))
 
-        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
-        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        input_channel = _make_divisible(input_channel * width_mult,
+                                        round_nearest)
+        self.last_channel = _make_divisible(
+            last_channel * max(1.0, width_mult), round_nearest)
         features = [ConvBNReLU(3, input_channel, stride=2)]
         for t, c, n, s in inverted_residual_setting:
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t))
+                features.append(
+                    block(
+                        input_channel, output_channel, stride, expand_ratio=t))
                 input_channel = output_channel
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1))
+        features.append(
+            ConvBNReLU(input_channel, self.last_channel, kernel_size=1))
         self.features = nn.Sequential(*features)
 
         self.classifier = nn.Sequential(
@@ -103,13 +132,18 @@ class MobileNetV2(nn.Module):
         x = self.classifier(x)
         return x
 
+
 def mobilenet_v2(pretrained=False, progress=True, **kwargs):
     model = MobileNetV2(**kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url('https://download.pytorch.org/models/mobilenet_v2-b0353104.pth', model_dir="./model_data", progress=progress)
+        state_dict = load_state_dict_from_url(
+            'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
+            model_dir="./model_data",
+            progress=progress)
         model.load_state_dict(state_dict)
     del model.classifier
     return model
+
 
 if __name__ == "__main__":
     net = mobilenet_v2()
