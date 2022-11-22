@@ -61,7 +61,13 @@ def add_extras(in_channels, backbone_name):
 
     return nn.ModuleList(layers)
 
-
+'''
+        提取出的feature maps再进行卷积
+        分别添加到定位的层和分类的层数
+        输入的通道数：提取特征层的输出通道数
+        输出的通道数：定位 k * 4  
+                   分类 k * num_classes
+'''
 class SSD300(nn.Module):
 
     def __init__(self, num_classes, backbone_name, pretrained=False):
@@ -154,6 +160,8 @@ class SSD300(nn.Module):
         self.conf = nn.ModuleList(conf_layers)
         self.backbone_name = backbone_name
 
+        #输入图片进入网络，获得六个特征层的结果
+
     def forward(self, x):
         #---------------------------#
         #   x是300,300,3
@@ -225,3 +233,8 @@ class SSD300(nn.Module):
             conf.view(conf.size(0), -1, self.num_classes),
         )
         return output
+        # [1, 8732, 4], [1, 8732, 10]
+
+xx = SSD300(10, 'vgg')
+x = torch.ones(1, 3, 300, 300)
+xx.forward(x)
